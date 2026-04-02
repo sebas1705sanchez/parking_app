@@ -49,3 +49,11 @@ parking_app/
 ├── requirements.txt
 └── templates/
     └── index.html
+
+
+
+## Correr el proyecto
+
+```bash
+pip install -r requirements.txt
+python app.py
