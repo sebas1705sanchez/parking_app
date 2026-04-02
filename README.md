@@ -50,7 +50,7 @@ parking_app/
 └── templates/
     └── index.html
 
-
+---
 
 ## Correr el proyecto
 
