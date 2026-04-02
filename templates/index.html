@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controlador de Parking</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .panel {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 24px;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .resumen {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .card {
+            background: #eef2f7;
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .estado-libre {
+            color: #0a7d2c;
+        }
+
+        .estado-lleno {
+            color: #b00020;
+        }
+
+        .controles {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        button {
+            border: none;
+            padding: 12px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .btn-entrada {
+            background: #198754;
+            color: white;
+        }
+
+        .btn-salida {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .grid-plazas {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .plaza {
+            height: 110px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+            user-select: none;
+        }
+
+        .plaza:hover {
+            transform: scale(1.03);
+            opacity: 0.92;
+        }
+
+        .libre {
+            background: #16a34a;
+        }
+
+        .ocupada {
+            background: #dc2626;
+        }
+
+        .leyenda {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 25px 0 10px;
+            flex-wrap: wrap;
+        }
+
+        .leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+        }
+
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .mensaje {
+            margin-top: 18px;
+            text-align: center;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .resumen {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .grid-plazas {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .resumen {
+                grid-template-columns: 1fr;
+            }
+
+            .grid-plazas {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="panel">
+        <h1>Controlador de Parking</h1>
+
+        <div class="resumen">
+            <div class="card">Capacidad: <span id="capacidad">16</span></div>
+            <div class="card">Ocupadas: <span id="ocupadas">0</span></div>
+            <div class="card">Disponibles: <span id="disponibles">16</span></div>
+            <div class="card">
+                Estado:
+                <span id="estado" class="estado-libre">LIBRE</span>
+            </div>
+        </div>
+
+        <div class="controles">
+            <button class="btn-entrada" onclick="registrarEntrada()">Simular entrada</button>
+            <button class="btn-salida" onclick="registrarSalida()">Simular salida</button>
+            <button class="btn-reset" onclick="reiniciarParking()">Reiniciar</button>
+        </div>
+
+        <div class="leyenda">
+            <div class="leyenda-item">
+                <span class="color-box" style="background:#16a34a;"></span>
+                Libre
+            </div>
+            <div class="leyenda-item">
+                <span class="color-box" style="background:#dc2626;"></span>
+                Ocupada
+            </div>
+        </div>
+
+        <div class="grid-plazas" id="gridPlazas"></div>
+
+        <div class="mensaje" id="mensaje"></div>
+    </div>
+
+    <script>
+        async function cargarPlazas() {
+            const respuesta = await fetch("/api/plazas");
+            const data = await respuesta.json();
+
+            document.getElementById("capacidad").textContent = data.capacidad_total;
+            document.getElementById("ocupadas").textContent = data.ocupadas;
+            document.getElementById("disponibles").textContent = data.disponibles;
+
+            const estado = document.getElementById("estado");
+            estado.textContent = data.estado;
+            estado.className = data.estado === "LLENO" ? "estado-lleno" : "estado-libre";
+
+            const grid = document.getElementById("gridPlazas");
+            grid.innerHTML = "";
+
+            data.plazas.forEach(plaza => {
+                const div = document.createElement("div");
+                div.className = `plaza ${plaza.ocupada ? "ocupada" : "libre"}`;
+                div.textContent = `Plaza ${plaza.id}`;
+                div.title = plaza.ocupada ? "Ocupada" : "Libre";
+                div.onclick = () => togglePlaza(plaza.id);
+                grid.appendChild(div);
+            });
+        }
+
+        async function registrarEntrada() {
+            const respuesta = await fetch("/api/entrada", {
+                method: "POST"
+            });
+
+            const data = await respuesta.json();
+            mostrarMensaje(data.mensaje, data.ok);
+            await cargarPlazas();
+        }
+
+        async function registrarSalida() {
+            const respuesta = await fetch("/api/salida", {
+                method: "POST"
+            });
+
+            const data = await respuesta.json();
+            mostrarMensaje(data.mensaje, data.ok);
+            await cargarPlazas();
+        }
+
+        async function togglePlaza(plazaId) {
+            const respuesta = await fetch(`/api/plaza/${plazaId}/toggle`, {
+                method: "POST"
+            });
+
+            const data = await respuesta.json();
+            mostrarMensaje(data.mensaje, data.ok);
+            await cargarPlazas();
+        }
+
+        async function reiniciarParking() {
+            const respuesta = await fetch("/api/reset", {
+                method: "POST"
+            });
+
+            const data = await respuesta.json();
+            mostrarMensaje(data.mensaje, data.ok);
+            await cargarPlazas();
+        }
+
+        function mostrarMensaje(texto, ok) {
+            const mensaje = document.getElementById("mensaje");
+            mensaje.textContent = texto;
+            mensaje.style.color = ok ? "#198754" : "#dc3545";
+        }
+
+        cargarPlazas();
+    </script>
+</body>
+
+</html>
